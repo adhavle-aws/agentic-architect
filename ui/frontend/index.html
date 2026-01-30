@@ -3,42 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AWS Architect AI - Enhanced with A2A Agents</title>
-    
+    <title>Agentic Architect - A2A Agents</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
     <style>
         :root {
             --aws-squid-ink: #232f3e;
-            --aws-smile-orange: #ff9900;
-            --aws-dark-blue: #16191f;
-            --aws-light-gray: #eaeded;
-            --aws-border-gray: #d5dbdb;
-            --aws-text-primary: #16191f;
-            --aws-text-secondary: #545b64;
-            --aws-bg-primary: #ffffff;
-            --aws-bg-secondary: #fafafa;
-            --aws-link-blue: #0073bb;
-            --aws-success-green: #037f0c;
-            --aws-error-red: #d13212;
+            --aws-orange: #ff9900;
+            --aws-blue: #0073bb;
+            --aws-green: #037f0c;
+            --aws-red: #d13212;
+            --border: #d5dbdb;
+            --bg-primary: #ffffff;
+            --bg-secondary: #fafafa;
+            --text-primary: #16191f;
+            --text-secondary: #545b64;
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: 'Amazon Ember', 'Helvetica Neue', Roboto, Arial, sans-serif;
-            background: var(--aws-bg-secondary);
-            color: var(--aws-text-primary);
+            font-family: 'Amazon Ember', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
         }
         
-        .container {
-            display: flex;
-            height: 100vh;
-        }
+        .container { display: flex; height: 100vh; }
         
         /* Sidebar */
         .sidebar {
@@ -47,52 +36,22 @@
             color: white;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
         }
         
         .sidebar-header {
             padding: 1.5rem 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         
         .sidebar-header h2 {
             font-size: 1.1rem;
             font-weight: 600;
-            color: white;
             margin-bottom: 0.25rem;
         }
         
         .sidebar-header p {
             font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .sidebar-menu {
-            flex: 1;
-            padding: 0.5rem 0;
-        }
-        
-        .menu-section-header {
-            padding: 1rem 1rem 0.5rem 1rem;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: rgba(255, 255, 255, 0.5);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: 0.5rem;
-        }
-        
-        .menu-section-header:first-child {
-            border-top: none;
-            margin-top: 0;
-        }
-        
-        .menu-section-note {
-            padding: 0 1rem 0.5rem 1rem;
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.4);
-            font-style: italic;
+            opacity: 0.6;
         }
         
         .menu-item {
@@ -100,22 +59,14 @@
             cursor: pointer;
             transition: background 0.2s;
             border-left: 3px solid transparent;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255,255,255,0.8);
         }
         
-        .menu-item:hover:not(.disabled) {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
+        .menu-item:hover { background: rgba(255,255,255,0.05); }
         .menu-item.active {
-            background: rgba(255, 153, 0, 0.1);
-            border-left-color: var(--aws-smile-orange);
+            background: rgba(255,153,0,0.1);
+            border-left-color: var(--aws-orange);
             color: white;
-        }
-        
-        .menu-item.disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
         }
         
         .menu-item-title {
@@ -140,128 +91,58 @@
             background: var(--aws-squid-ink);
             color: white;
             padding: 1rem 2rem;
-            border-bottom: 4px solid var(--aws-smile-orange);
+            border-bottom: 4px solid var(--aws-orange);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
-        .header h1 {
-            font-size: 1.5rem;
-            font-weight: 400;
-        }
-        
-        .mode-badge {
+        .agent-badge {
             padding: 0.4rem 1rem;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             border-radius: 4px;
             font-size: 0.85rem;
-            font-weight: 600;
         }
         
-        /* Standard Interface (Quick Generate) */
-        #standardInterface {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-        
-        .tabs {
-            display: flex;
-            background: var(--aws-bg-secondary);
-            border-bottom: 1px solid var(--aws-border-gray);
-            padding: 0 2rem;
-        }
-        
-        .tab {
-            padding: 1rem 1.5rem;
-            background: transparent;
-            border: none;
-            color: var(--aws-text-secondary);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        
-        .tab:hover {
-            color: var(--aws-text-primary);
-        }
-        
-        .tab.active {
-            color: var(--aws-link-blue);
-            border-bottom-color: var(--aws-link-blue);
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 2rem;
-            overflow-y: auto;
-            flex: 1;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        /* Chat Interface (A2A Agents) */
-        #chatInterface {
-            display: none;
-            flex: 1;
-            padding: 2rem;
-            gap: 1rem;
-        }
-        
+        /* Chat Layout */
         .chat-layout {
             display: flex;
+            flex: 1;
             gap: 1rem;
-            height: 100%;
+            padding: 1rem;
         }
         
-        .chat-container {
+        .chat-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
             background: white;
-            border: 1px solid var(--aws-border-gray);
+            border: 1px solid var(--border);
             border-radius: 4px;
-            min-width: 400px;
         }
         
         .chat-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--aws-border-gray);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            background: var(--aws-bg-secondary);
         }
         
-        .chat-header h3 {
-            font-size: 1rem;
-            font-weight: 600;
-        }
-        
-        .chat-status {
-            font-size: 0.85rem;
-            color: var(--aws-success-green);
-            font-weight: 600;
-        }
+        .chat-status { color: var(--aws-green); font-weight: 600; }
         
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 1.5rem;
+            padding: 1rem;
             display: flex;
             flex-direction: column;
             gap: 1rem;
         }
         
-        .chat-message {
+        .message {
             display: flex;
             gap: 0.75rem;
-            align-items: flex-start;
             animation: fadeIn 0.3s;
         }
         
@@ -270,15 +151,12 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .chat-message-user {
-            flex-direction: row-reverse;
-        }
+        .message-user { flex-direction: row-reverse; }
         
-        .message-avatar {
+        .avatar {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: var(--aws-smile-orange);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -286,44 +164,39 @@
             flex-shrink: 0;
         }
         
-        .chat-message-user .message-avatar {
-            background: var(--aws-link-blue);
-        }
+        .avatar-user { background: var(--aws-blue); }
+        .avatar-agent { background: var(--aws-orange); }
         
         .message-content {
             flex: 1;
             padding: 0.75rem 1rem;
             border-radius: 12px;
-            background: var(--aws-bg-secondary);
             max-width: 75%;
             line-height: 1.5;
         }
         
-        .chat-message-user .message-content {
-            background: var(--aws-link-blue);
+        .message-user .message-content {
+            background: var(--aws-blue);
             color: white;
         }
         
-        .message-content.markdown-content {
-            background: white;
-            border: 1px solid var(--aws-border-gray);
+        .message-agent .message-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
         }
         
-        .chat-input-area {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid var(--aws-border-gray);
-            background: var(--aws-bg-secondary);
-        }
-        
-        .chat-input-group {
+        .chat-input {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
             display: flex;
             gap: 1rem;
         }
         
-        .chat-input-group textarea {
+        .chat-input textarea {
             flex: 1;
             padding: 0.75rem;
-            border: 1px solid var(--aws-border-gray);
+            border: 1px solid var(--border);
             border-radius: 4px;
             font-family: inherit;
             font-size: 0.9rem;
@@ -331,107 +204,62 @@
             min-height: 60px;
         }
         
-        .chat-input-group textarea:focus {
+        .chat-input textarea:focus {
             outline: none;
-            border-color: var(--aws-link-blue);
-            box-shadow: 0 0 0 1px var(--aws-link-blue);
+            border-color: var(--aws-blue);
+            box-shadow: 0 0 0 1px var(--aws-blue);
         }
         
+        .btn {
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--aws-orange);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) { background: #ec7211; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* Results Panel */
         .results-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
             background: white;
-            border: 1px solid var(--aws-border-gray);
+            border: 1px solid var(--border);
             border-radius: 4px;
         }
         
         .results-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--aws-border-gray);
-            background: var(--aws-bg-secondary);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
             font-weight: 600;
         }
         
-        .result-content {
+        .results-content {
             flex: 1;
             overflow-y: auto;
             padding: 1.5rem;
         }
         
-        /* Buttons */
-        .aws-button {
-            padding: 0.6rem 1.5rem;
-            border: none;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-        
-        .aws-button-primary {
-            background: var(--aws-smile-orange);
-            color: white;
-        }
-        
-        .aws-button-primary:hover:not(:disabled) {
-            background: #ec7211;
-        }
-        
-        .aws-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* Input Area (Quick Generate) */
-        .input-area {
-            padding: 1.5rem 2rem;
-            background: var(--aws-bg-secondary);
-            border-top: 1px solid var(--aws-border-gray);
-        }
-        
-        .input-group {
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .input-group textarea {
-            flex: 1;
-            padding: 0.75rem;
-            background: white;
-            border: 1px solid var(--aws-border-gray);
-            border-radius: 4px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            resize: vertical;
-            min-height: 100px;
-        }
-        
-        /* Markdown Content */
-        .markdown-content {
-            line-height: 1.6;
-        }
-        
-        .markdown-content h2 {
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
-            color: var(--aws-text-primary);
-        }
-        
-        .markdown-content p {
-            margin-bottom: 1rem;
-        }
-        
+        .markdown-content { line-height: 1.6; }
+        .markdown-content h2 { margin: 1.5rem 0 0.75rem; }
+        .markdown-content p { margin-bottom: 1rem; }
         .markdown-content code {
             background: #f4f4f4;
             padding: 0.2rem 0.4rem;
             border-radius: 3px;
-            font-family: 'Monaco', monospace;
+            font-family: Monaco, monospace;
             font-size: 0.9em;
         }
-        
         .markdown-content pre {
             background: #f4f4f4;
             padding: 1rem;
@@ -439,54 +267,24 @@
             overflow-x: auto;
             margin: 1rem 0;
         }
+        .markdown-content pre code { background: none; padding: 0; }
         
-        .markdown-content pre code {
-            background: none;
-            padding: 0;
-        }
-        
-        .loading {
+        .welcome {
             text-align: center;
-            padding: 3rem;
-            color: var(--aws-text-secondary);
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
         }
         
-        .typing-indicator {
-            display: inline-block;
-        }
-        
-        .typing-indicator span {
-            display: inline-block;
+        .typing span {
             animation: typing 1.4s infinite;
             opacity: 0;
         }
-        
-        .typing-indicator span:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        
-        .typing-indicator span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
         
         @keyframes typing {
             0%, 60%, 100% { opacity: 0; }
             30% { opacity: 1; }
-        }
-        
-        .welcome-message {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--aws-text-secondary);
-        }
-        
-        .welcome-message h2 {
-            color: var(--aws-text-primary);
-            margin-bottom: 1rem;
-        }
-        
-        .welcome-message p {
-            margin-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -494,37 +292,17 @@
     <div class="container">
         <div class="sidebar">
             <div class="sidebar-header">
-                <h2>Architect AI</h2>
-                <p>AI-Powered Infrastructure Design</p>
+                <h2>Agentic Architect</h2>
+                <p>A2A Conversational Agents</p>
             </div>
-            
             <div class="sidebar-menu">
-                <!-- Quick Generate Section -->
-                <div class="menu-section-header">Quick Generate</div>
-                <div class="menu-section-note">MCP wrapper with LLM</div>
-                
-                <div class="menu-item active" id="quickDesignMenu" onclick="switchMode('quick-design')">
-                    <div class="menu-item-title">⚡ Design</div>
-                    <div class="menu-item-desc">Instant architecture generation</div>
-                </div>
-                
-                <div class="menu-item disabled" id="quickDeployMenu">
-                    <div class="menu-item-title">🚀 Deploy</div>
-                    <div class="menu-item-desc">One-click deployment</div>
-                </div>
-                
-                <!-- A2A Agents Section -->
-                <div class="menu-section-header">A2A Agents</div>
-                <div class="menu-section-note">True agents, conversational</div>
-                
-                <div class="menu-item" id="a2aOnboardingMenu" onclick="switchMode('a2a-onboarding')">
+                <div class="menu-item active" id="onboardingMenu" onclick="switchAgent('onboarding')">
                     <div class="menu-item-title">🤖 Onboarding Agent</div>
-                    <div class="menu-item-desc">Conversational design</div>
+                    <div class="menu-item-desc">Design & architecture</div>
                 </div>
-                
-                <div class="menu-item" id="a2aProvisioningMenu" onclick="switchMode('a2a-provisioning')">
+                <div class="menu-item" id="provisioningMenu" onclick="switchAgent('provisioning')">
                     <div class="menu-item-title">🚀 Provisioning Agent</div>
-                    <div class="menu-item-desc">Intelligent deployment</div>
+                    <div class="menu-item-desc">Deploy & monitor</div>
                 </div>
             </div>
         </div>
@@ -532,91 +310,33 @@
         <div class="main-content">
             <div class="header">
                 <h1>AWS Architect AI</h1>
-                <div class="mode-badge" id="modeBadge">Quick Generate</div>
+                <div class="agent-badge" id="agentBadge">Onboarding Agent</div>
             </div>
             
-            <!-- Standard Interface (Quick Generate) -->
-            <div id="standardInterface">
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab('architecture')">Architecture</button>
-                    <button class="tab" onclick="switchTab('template')">Template</button>
-                    <button class="tab" onclick="switchTab('review')">Review</button>
-                    <button class="tab" onclick="switchTab('cost')">Cost</button>
-                </div>
-                
-                <div id="architecture" class="tab-content active">
-                    <div id="architectureContent" class="loading">
-                        Enter your infrastructure requirements below to begin
+            <div class="chat-layout">
+                <div class="chat-panel">
+                    <div class="chat-header">
+                        <span>Conversation</span>
+                        <span class="chat-status" id="status">🟢 Connected</span>
                     </div>
-                </div>
-                
-                <div id="template" class="tab-content">
-                    <div id="templateContent" class="loading">
-                        Generate architecture to see CloudFormation template
-                    </div>
-                </div>
-                
-                <div id="review" class="tab-content">
-                    <div id="reviewContent" class="loading">
-                        Generate architecture to see Well-Architected review
-                    </div>
-                </div>
-                
-                <div id="cost" class="tab-content">
-                    <div id="costContent" class="loading">
-                        Generate architecture to see cost optimization
-                    </div>
-                </div>
-                
-                <div class="input-area">
-                    <div class="input-group">
-                        <textarea 
-                            id="promptInput" 
-                            placeholder="Describe your infrastructure requirements...&#10;&#10;Example: Create a 3-tier web application with VPC, ALB, ECS, and RDS in us-east-1."
-                        ></textarea>
-                        <button class="aws-button aws-button-primary" onclick="generateQuick()" id="generateBtn">
-                            Generate
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Chat Interface (A2A Agents) -->
-            <div id="chatInterface">
-                <div class="chat-layout">
-                    <div class="chat-container">
-                        <div class="chat-header">
-                            <h3 id="chatAgentName">Onboarding Agent</h3>
-                            <span class="chat-status">🟢 Ready</span>
-                        </div>
-                        
-                        <div class="chat-messages" id="chatMessages">
-                            <div class="welcome-message">
-                                <h2>👋 Welcome!</h2>
-                                <p>I'm your AWS Solutions Architect assistant.</p>
-                                <p>Ask me anything about designing cloud architectures.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="chat-input-area">
-                            <div class="chat-input-group">
-                                <textarea 
-                                    id="chatInput" 
-                                    placeholder="Ask me about AWS architecture..."
-                                    onkeypress="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChatMessage();}"
-                                ></textarea>
-                                <button class="aws-button aws-button-primary" onclick="sendChatMessage()">
-                                    Send
-                                </button>
-                            </div>
+                    <div class="chat-messages" id="messages">
+                        <div class="welcome">
+                            <h2>👋 Welcome!</h2>
+                            <p>I'm your AWS Solutions Architect.</p>
+                            <p>Ask me anything about cloud architecture.</p>
                         </div>
                     </div>
-                    
-                    <div class="results-panel">
-                        <div class="results-header">Generated Content</div>
-                        <div class="result-content" id="resultContent">
-                            <div class="loading">Generated content will appear here</div>
-                        </div>
+                    <div class="chat-input">
+                        <textarea id="input" placeholder="Ask about AWS architecture..." 
+                            onkeypress="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+                        <button class="btn btn-primary" onclick="send()" id="sendBtn">Send</button>
+                    </div>
+                </div>
+                
+                <div class="results-panel">
+                    <div class="results-header">Generated Content</div>
+                    <div class="results-content" id="results">
+                        <div class="welcome">Content will appear here</div>
                     </div>
                 </div>
             </div>
@@ -624,239 +344,141 @@
     </div>
     
     <script>
-        const BACKEND_URL = 'http://localhost:3001';
-        let currentMode = 'quick-design';
-        let conversationHistory = [];
-        let currentSessionId = null;
+        const WS_URL = 'wss://3vq3ao8ng1.execute-api.us-east-1.amazonaws.com/prod';
+        let ws = null;
+        let currentAgent = 'onboarding';
+        let sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2,9)}`;
+        let callbacks = new Map();
         
-        // Mode switching
-        function switchMode(mode) {
-            currentMode = mode;
+        function initWS() {
+            ws = new WebSocket(WS_URL);
             
-            // Update active menu item
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            const menuMap = {
-                'quick-design': 'quickDesignMenu',
-                'quick-deploy': 'quickDeployMenu',
-                'a2a-onboarding': 'a2aOnboardingMenu',
-                'a2a-provisioning': 'a2aProvisioningMenu'
+            ws.onopen = () => {
+                console.log('✅ Connected');
+                document.getElementById('status').textContent = '🟢 Connected';
             };
             
-            document.getElementById(menuMap[mode])?.classList.add('active');
-            
-            // Update mode badge
-            const modeBadge = document.getElementById('modeBadge');
-            if (mode.startsWith('a2a')) {
-                modeBadge.textContent = mode === 'a2a-onboarding' ? 'Onboarding Agent' : 'Provisioning Agent';
-            } else {
-                modeBadge.textContent = 'Quick Generate';
-            }
-            
-            // Switch interface
-            if (mode.startsWith('a2a')) {
-                document.getElementById('standardInterface').style.display = 'none';
-                document.getElementById('chatInterface').style.display = 'block';
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                console.log('📨', msg);
                 
-                // Update chat header
-                document.getElementById('chatAgentName').textContent = 
-                    mode === 'a2a-onboarding' ? 'Onboarding Agent' : 'Provisioning Agent';
-                
-                // Clear chat if switching agents
-                if (mode !== currentMode) {
-                    clearChat();
-                }
-            } else {
-                document.getElementById('standardInterface').style.display = 'flex';
-                document.getElementById('chatInterface').style.display = 'none';
-            }
-        }
-        
-        // Tab switching (Quick Generate mode)
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-        }
-        
-        // Quick Generate (MCP wrapper)
-        async function generateQuick() {
-            const prompt = document.getElementById('promptInput').value.trim();
-            if (!prompt) return;
-            
-            const btn = document.getElementById('generateBtn');
-            btn.disabled = true;
-            btn.textContent = 'Generating...';
-            
-            try {
-                // Call all MCP tools in parallel
-                const [overview, template, review, cost] = await Promise.all([
-                    callMcpTool('generate_architecture_overview', { prompt }),
-                    callMcpTool('build_cfn_template', { prompt, format: 'yaml' }),
-                    callMcpTool('well_architected_review', { prompt }),
-                    callMcpTool('analyze_cost_optimization', { prompt })
-                ]);
-                
-                // Display results
-                displayContent('architectureContent', overview.overview || overview);
-                displayContent('templateContent', template.template || template);
-                displayContent('reviewContent', review.review || review);
-                displayContent('costContent', cost.analysis || cost);
-                
-            } catch (error) {
-                alert(`Error: ${error.message}`);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Generate';
-            }
-        }
-        
-        async function callMcpTool(toolName, args) {
-            const response = await fetch(`${BACKEND_URL}/api/mcp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    jsonrpc: '2.0',
-                    id: Date.now(),
-                    method: 'tools/call',
-                    params: { name: toolName, arguments: args }
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.result?.content?.[0]?.text) {
-                return JSON.parse(data.result.content[0].text);
-            }
-            
-            throw new Error('Invalid MCP response');
-        }
-        
-        // A2A Agent Chat
-        async function sendChatMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            
-            if (!message) return;
-            
-            // Add user message
-            addChatMessage('user', message);
-            input.value = '';
-            
-            // Show typing indicator
-            showTypingIndicator();
-            
-            try {
-                const agentType = currentMode === 'a2a-onboarding' ? 'onboarding' : 'provisioning';
-                
-                const response = await fetch(`${BACKEND_URL}/api/agent/${agentType}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message,
-                        sessionId: currentSessionId || `session-${Date.now()}`
-                    })
-                });
-                
-                const result = await response.json();
-                
-                removeTypingIndicator();
-                
-                if (result.success) {
-                    addChatMessage('agent', result.response);
-                    
-                    // Update results panel if content generated
-                    if (result.response) {
-                        displayContent('resultContent', result.response);
+                if (msg.type === 'response') {
+                    const cb = callbacks.get(msg.requestId);
+                    if (cb) {
+                        cb(msg.response);
+                        callbacks.delete(msg.requestId);
                     }
-                } else {
-                    addChatMessage('error', `Error: ${result.error}`);
+                    addMessage('agent', msg.response);
+                    document.getElementById('sendBtn').disabled = false;
+                } else if (msg.type === 'error') {
+                    addMessage('error', msg.error);
+                    document.getElementById('sendBtn').disabled = false;
                 }
-                
-            } catch (error) {
-                removeTypingIndicator();
-                addChatMessage('error', `Error: ${error.message}`);
-            }
+            };
+            
+            ws.onerror = () => {
+                document.getElementById('status').textContent = '🔴 Error';
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('status').textContent = '🟡 Reconnecting...';
+                setTimeout(initWS, 2000);
+            };
         }
         
-        function addChatMessage(role, content) {
-            const chatMessages = document.getElementById('chatMessages');
+        function switchAgent(agent) {
+            currentAgent = agent;
+            sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2,9)}`;
             
-            // Remove welcome message if present
-            const welcome = chatMessages.querySelector('.welcome-message');
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            document.getElementById(agent === 'onboarding' ? 'onboardingMenu' : 'provisioningMenu').classList.add('active');
+            document.getElementById('agentBadge').textContent = agent === 'onboarding' ? 'Onboarding Agent' : 'Provisioning Agent';
+            
+            clearChat();
+        }
+        
+        function send() {
+            const input = document.getElementById('input');
+            const message = input.value.trim();
+            if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+            
+            addMessage('user', message);
+            input.value = '';
+            document.getElementById('sendBtn').disabled = true;
+            
+            const requestId = Date.now().toString();
+            
+            ws.send(JSON.stringify({
+                id: requestId,
+                agentType: currentAgent,
+                message: message,
+                sessionId: sessionId
+            }));
+            
+            showTyping();
+        }
+        
+        function addMessage(role, content) {
+            const container = document.getElementById('messages');
+            const welcome = container.querySelector('.welcome');
             if (welcome) welcome.remove();
             
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message chat-message-${role}`;
+            removeTyping();
+            
+            const div = document.createElement('div');
+            div.className = `message message-${role}`;
             
             if (role === 'user') {
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">👤</div>
+                div.innerHTML = `
+                    <div class="avatar avatar-user">👤</div>
                     <div class="message-content">${escapeHtml(content)}</div>
                 `;
             } else if (role === 'agent') {
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">🤖</div>
+                div.innerHTML = `
+                    <div class="avatar avatar-agent">🤖</div>
                     <div class="message-content markdown-content">${marked.parse(content)}</div>
                 `;
+                updateResults(content);
             } else {
-                messageDiv.innerHTML = `
-                    <div class="message-content" style="background: #fef6f6; color: var(--aws-error-red);">
-                        ${escapeHtml(content)}
-                    </div>
-                `;
+                div.innerHTML = `<div class="message-content" style="background:#fef6f6;color:var(--aws-red);">${escapeHtml(content)}</div>`;
             }
             
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
         }
         
-        function showTypingIndicator() {
-            const chatMessages = document.getElementById('chatMessages');
-            const indicator = document.createElement('div');
-            indicator.id = 'typingIndicator';
-            indicator.className = 'chat-message chat-message-agent';
-            indicator.innerHTML = `
-                <div class="message-avatar">🤖</div>
-                <div class="message-content">
-                    <span class="typing-indicator">
-                        <span>.</span><span>.</span><span>.</span>
-                    </span>
-                </div>
+        function showTyping() {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.id = 'typing';
+            div.className = 'message message-agent';
+            div.innerHTML = `
+                <div class="avatar avatar-agent">🤖</div>
+                <div class="message-content typing"><span>.</span><span>.</span><span>.</span></div>
             `;
-            chatMessages.appendChild(indicator);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
         }
         
-        function removeTypingIndicator() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) indicator.remove();
+        function removeTyping() {
+            const typing = document.getElementById('typing');
+            if (typing) typing.remove();
         }
         
         function clearChat() {
-            const chatMessages = document.getElementById('chatMessages');
-            chatMessages.innerHTML = `
-                <div class="welcome-message">
+            document.getElementById('messages').innerHTML = `
+                <div class="welcome">
                     <h2>👋 Welcome!</h2>
-                    <p>I'm your AWS Solutions Architect assistant.</p>
-                    <p>Ask me anything about designing cloud architectures.</p>
+                    <p>I'm your ${currentAgent === 'onboarding' ? 'architecture design' : 'deployment'} assistant.</p>
+                    <p>How can I help you today?</p>
                 </div>
             `;
-            conversationHistory = [];
-            currentSessionId = null;
+            document.getElementById('results').innerHTML = '<div class="welcome">Content will appear here</div>';
         }
         
-        function displayContent(elementId, content) {
-            const element = document.getElementById(elementId);
-            if (typeof content === 'string') {
-                element.innerHTML = `<div class="markdown-content">${marked.parse(content)}</div>`;
-            } else {
-                element.innerHTML = `<div class="markdown-content">${marked.parse(JSON.stringify(content, null, 2))}</div>`;
-            }
+        function updateResults(content) {
+            const results = document.getElementById('results');
+            results.innerHTML = `<div class="markdown-content">${marked.parse(content)}</div>`;
         }
         
         function escapeHtml(text) {
@@ -866,25 +488,7 @@
         }
         
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 AWS Architect AI initialized');
-            
-            // Check backend health
-            fetch(`${BACKEND_URL}/health`)
-                .then(r => r.json())
-                .then(data => {
-                    console.log('✅ Backend health:', data);
-                    
-                    // Disable A2A agents if not configured
-                    if (!data.modes.a2aAgents.available) {
-                        document.getElementById('a2aOnboardingMenu').classList.add('disabled');
-                        document.getElementById('a2aProvisioningMenu').classList.add('disabled');
-                        console.warn('⚠️  A2A agents not configured');
-                    }
-                })
-                .catch(err => {
-                    console.error('❌ Backend not available:', err);
-                });
-        });
+        initWS();
     </script>
 </body>
+</html>
