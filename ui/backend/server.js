@@ -145,7 +145,7 @@ app.post('/api/agent/:agentType', async (req, res) => {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'Host': url.host,
-      'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': sessionId || `session-${Date.now()}`
+      'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': sessionId || `session-${Date.now()}-${Math.random().toString(36).substr(2, 20)}`
     };
     
     // Create HTTP request for signing
@@ -179,7 +179,20 @@ app.post('/api/agent/:agentType', async (req, res) => {
     
     // Extract text from A2A response
     let responseText = '';
-    if (data.result?.message?.parts) {
+    
+    // Check for artifacts (AgentCore format)
+    if (data.result?.artifacts) {
+      for (const artifact of data.result.artifacts) {
+        if (artifact.parts) {
+          responseText += artifact.parts
+            .filter(p => p.kind === 'text')
+            .map(p => p.text)
+            .join('');
+        }
+      }
+    }
+    // Fallback: Check for message format
+    else if (data.result?.message?.parts) {
       responseText = data.result.message.parts
         .filter(p => p.kind === 'text')
         .map(p => p.text)
