@@ -5,7 +5,7 @@ backend:
       commands:
         - echo "Building Agentic-Architect backend..."
         - cd ui/backend
-        - npm ci
+        - npm install
         - echo "Backend build complete"
 frontend:
   phases:
