@@ -1,0 +1,359 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: WebSocket API for A2A Agents (Onboarding + Provisioning)
+
+Parameters:
+  OnboardingAgentArn:
+    Type: String
+    Description: Onboarding Agent ARN
+    Default: arn:aws:bedrock-agentcore:us-east-1:905767016260:runtime/onboarding_agent-j6Y9CIGVDj
+  
+  ProvisioningAgentArn:
+    Type: String
+    Description: Provisioning Agent ARN
+    Default: arn:aws:bedrock-agentcore:us-east-1:905767016260:runtime/provisioning_agent-lZECd14iTW
+
+Resources:
+  # WebSocket API
+  WebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: agentic-architect-websocket
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: '$request.body.action'
+
+  # Lambda Execution Role
+  WebSocketLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: WebSocketPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:ManageConnections
+                Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*'
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:InvokeAgentRuntime
+                Resource:
+                  - !Ref OnboardingAgentArn
+                  - !Ref ProvisioningAgentArn
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:agentic-architect-websocket'
+
+  # Lambda Function
+  WebSocketLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: agentic-architect-websocket
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt WebSocketLambdaRole.Arn
+      Timeout: 600
+      MemorySize: 1024
+      Environment:
+        Variables:
+          ONBOARDING_AGENT_ARN: !Ref OnboardingAgentArn
+          PROVISIONING_AGENT_ARN: !Ref ProvisioningAgentArn
+          REGION: !Ref AWS::Region
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import boto3
+          from botocore.auth import SigV4Auth
+          from botocore.awsrequest import AWSRequest
+          import urllib.request
+          
+          ONBOARDING_AGENT_ARN = os.environ['ONBOARDING_AGENT_ARN']
+          PROVISIONING_AGENT_ARN = os.environ['PROVISIONING_AGENT_ARN']
+          REGION = os.environ.get('REGION', 'us-east-1')
+          
+          lambda_client = boto3.client('lambda')
+          apigw = None
+          
+          def get_apigw_client(event):
+              global apigw
+              if apigw is None:
+                  domain = event['requestContext']['domainName']
+                  stage = event['requestContext']['stage']
+                  endpoint = f"https://{domain}/{stage}"
+                  apigw = boto3.client('apigatewaymanagementapi', endpoint_url=endpoint)
+              return apigw
+          
+          def send_message(connection_id, message, event):
+              try:
+                  client = get_apigw_client(event)
+                  client.post_to_connection(
+                      ConnectionId=connection_id,
+                      Data=json.dumps(message)
+                  )
+                  return True
+              except Exception as e:
+                  print(f"Error sending message: {e}")
+                  return False
+          
+          def call_a2a_agent(agent_arn, message, session_id):
+              """Call A2A agent via AgentCore"""
+              print(f"Calling A2A agent: {agent_arn}")
+              print(f"Message: {message[:100]}...")
+              
+              session = boto3.Session()
+              credentials = session.get_credentials()
+              
+              encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')
+              agent_url = f"https://bedrock-agentcore.{REGION}.amazonaws.com/runtimes/{encoded_arn}/invocations/"
+              
+              # A2A message format
+              a2a_message = {
+                  'jsonrpc': '2.0',
+                  'id': int(session_id.split('-')[1]) if '-' in session_id else 1,
+                  'method': 'message/send',
+                  'params': {
+                      'message': {
+                          'role': 'user',
+                          'parts': [{'kind': 'text', 'text': message}],
+                          'messageId': f"msg-{session_id}"
+                      }
+                  }
+              }
+              
+              request_body = json.dumps(a2a_message)
+              
+              aws_request = AWSRequest(
+                  method='POST',
+                  url=agent_url,
+                  data=request_body,
+                  headers={
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                      'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': session_id
+                  }
+              )
+              
+              SigV4Auth(credentials, 'bedrock-agentcore', REGION).add_auth(aws_request)
+              
+              req = urllib.request.Request(
+                  agent_url,
+                  data=request_body.encode('utf-8'),
+                  headers=dict(aws_request.headers)
+              )
+              
+              with urllib.request.urlopen(req, timeout=300) as response:
+                  response_data = response.read().decode('utf-8')
+                  result = json.loads(response_data)
+                  
+                  # Extract text from artifacts
+                  response_text = ''
+                  if result.get('result', {}).get('artifacts'):
+                      for artifact in result['result']['artifacts']:
+                          if artifact.get('parts'):
+                              for part in artifact['parts']:
+                                  if part.get('kind') == 'text':
+                                      response_text += part['text']
+                  
+                  return {
+                      'response': response_text,
+                      'contextId': result.get('result', {}).get('contextId'),
+                      'taskId': result.get('result', {}).get('id')
+                  }
+          
+          def lambda_handler(event, context):
+              route_key = event.get('requestContext', {}).get('routeKey')
+              connection_id = event.get('requestContext', {}).get('connectionId')
+              
+              # Check if this is an async invocation
+              if 'async_processing' in event:
+                  async_event = event['async_processing']
+                  agent_type = async_event['agentType']
+                  message = async_event['message']
+                  request_id = async_event['requestId']
+                  session_id = async_event['sessionId']
+                  connection_id = async_event['connectionId']
+                  original_event = async_event['event']
+                  
+                  print(f"Async processing: {agent_type}")
+                  
+                  try:
+                      # Send progress
+                      send_message(connection_id, {
+                          'type': 'progress',
+                          'requestId': request_id,
+                          'message': f'Agent is thinking...'
+                      }, original_event)
+                      
+                      # Call A2A agent
+                      agent_arn = ONBOARDING_AGENT_ARN if agent_type == 'onboarding' else PROVISIONING_AGENT_ARN
+                      result = call_a2a_agent(agent_arn, message, session_id)
+                      
+                      # Send response
+                      send_message(connection_id, {
+                          'type': 'response',
+                          'requestId': request_id,
+                          'agentType': agent_type,
+                          'response': result['response'],
+                          'contextId': result.get('contextId'),
+                          'taskId': result.get('taskId')
+                      }, original_event)
+                  
+                  except Exception as e:
+                      print(f"Error in async processing: {e}")
+                      import traceback
+                      traceback.print_exc()
+                      send_message(connection_id, {
+                          'type': 'error',
+                          'requestId': request_id,
+                          'error': str(e)
+                      }, original_event)
+                  
+                  return {'statusCode': 200}
+              
+              try:
+                  if route_key == '$connect':
+                      send_message(connection_id, {
+                          'type': 'connected',
+                          'message': 'Connected to Agentic-Architect'
+                      }, event)
+                      return {'statusCode': 200}
+                  
+                  elif route_key == '$disconnect':
+                      print(f"Client disconnected: {connection_id}")
+                      return {'statusCode': 200}
+                  
+                  elif route_key == '$default':
+                      body = json.loads(event.get('body', '{}'))
+                      request_id = body.get('id')
+                      agent_type = body.get('agentType', 'onboarding')
+                      message = body.get('message')
+                      session_id = body.get('sessionId', f"session-{request_id}")
+                      
+                      print(f"Agent: {agent_type}, Request: {request_id}")
+                      
+                      # Send acknowledgment
+                      send_message(connection_id, {
+                          'type': 'acknowledged',
+                          'requestId': request_id,
+                          'agentType': agent_type
+                      }, event)
+                      
+                      # Invoke self asynchronously for long-running agent calls
+                      lambda_client.invoke(
+                          FunctionName=context.function_name,
+                          InvocationType='Event',
+                          Payload=json.dumps({
+                              'async_processing': {
+                                  'agentType': agent_type,
+                                  'message': message,
+                                  'requestId': request_id,
+                                  'sessionId': session_id,
+                                  'connectionId': connection_id,
+                                  'event': event
+                              }
+                          })
+                      )
+                      
+                      return {'statusCode': 200}
+                  
+                  else:
+                      return {'statusCode': 400}
+              
+              except Exception as e:
+                  print(f"Error: {e}")
+                  import traceback
+                  traceback.print_exc()
+                  
+                  if route_key == '$default':
+                      try:
+                          send_message(connection_id, {
+                              'type': 'error',
+                              'requestId': body.get('id'),
+                              'error': str(e)
+                          }, event)
+                      except:
+                          pass
+                  
+                  return {'statusCode': 500}
+
+  # Routes and Integrations
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: $connect
+      Target: !Sub 'integrations/${ConnectIntegration}'
+
+  ConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebSocketLambda}'
+
+  DefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: $default
+      Target: !Sub 'integrations/${DefaultIntegration}'
+
+  DefaultIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebSocketLambda}'
+
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: $disconnect
+      Target: !Sub 'integrations/${DisconnectIntegration}'
+
+  DisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebSocketLambda}'
+
+  # Stage
+  WebSocketStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref WebSocketApi
+      StageName: prod
+      AutoDeploy: true
+
+  # Lambda Permissions
+  ConnectPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WebSocketLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*'
+
+Outputs:
+  WebSocketUrl:
+    Description: WebSocket API endpoint
+    Value: !Sub 'wss://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Export:
+      Name: AgenticArchitectWebSocketUrl
+  
+  LambdaFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt WebSocketLambda.Arn
