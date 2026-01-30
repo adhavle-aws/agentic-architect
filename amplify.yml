@@ -12,8 +12,7 @@ frontend:
     build:
       commands:
         - echo "Building Agentic-Architect frontend..."
-        - cd ui/frontend
-        - echo "Frontend build complete"
+        - echo "Frontend is static HTML, no build needed"
   artifacts:
     baseDirectory: ui/frontend
     files:
