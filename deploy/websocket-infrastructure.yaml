@@ -45,13 +45,10 @@ Resources:
                 Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*'
               - Effect: Allow
                 Action:
-                  - bedrock-agentcore:InvokeAgentRuntime
-                  - bedrock-agentcore:InvokeRuntime
+                  - bedrock:InvokeAgent
                 Resource:
                   - !Ref OnboardingAgentArn
                   - !Ref ProvisioningAgentArn
-                  - !Sub '${OnboardingAgentArn}/*'
-                  - !Sub '${ProvisioningAgentArn}/*'
               - Effect: Allow
                 Action:
                   - lambda:InvokeFunction
