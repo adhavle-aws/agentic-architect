@@ -46,9 +46,12 @@ Resources:
               - Effect: Allow
                 Action:
                   - bedrock-agentcore:InvokeAgentRuntime
+                  - bedrock-agentcore:InvokeRuntime
                 Resource:
                   - !Ref OnboardingAgentArn
                   - !Ref ProvisioningAgentArn
+                  - !Sub '${OnboardingAgentArn}/*'
+                  - !Sub '${ProvisioningAgentArn}/*'
               - Effect: Allow
                 Action:
                   - lambda:InvokeFunction
