@@ -74,9 +74,116 @@ Resources:
           import json
           import os
           import boto3
-          from botocore.auth import SigV4Auth
-          from botocore.awsrequest import AWSRequest
-          import urllib.request
+          
+          ONBOARDING_AGENT_ARN = os.environ['ONBOARDING_AGENT_ARN']
+          PROVISIONING_AGENT_ARN = os.environ['PROVISIONING_AGENT_ARN']
+          REGION = os.environ.get('REGION', 'us-east-1')
+          
+          lambda_client = boto3.client('lambda')
+          bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name=REGION)
+          apigw = None
+          
+          def get_apigw_client(event):
+              global apigw
+              if apigw is None:
+                  domain = event['requestContext']['domainName']
+                  stage = event['requestContext']['stage']
+                  endpoint = f"https://{domain}/{stage}"
+                  apigw = boto3.client('apigatewaymanagementapi', endpoint_url=endpoint)
+              return apigw
+          
+          def send_message(connection_id, message, event):
+              try:
+                  client = get_apigw_client(event)
+                  client.post_to_connection(ConnectionId=connection_id, Data=json.dumps(message))
+                  return True
+              except Exception as e:
+                  print(f"Error sending: {e}")
+                  return False
+          
+          def call_a2a_agent(agent_arn, message, session_id):
+              agent_id = agent_arn.split('/')[-1]
+              print(f"Calling agent ID: {agent_id}")
+              
+              response = bedrock_agent_runtime.invoke_agent(
+                  agentId=agent_id,
+                  agentAliasId='DEFAULT',
+                  sessionId=session_id,
+                  inputText=message
+              )
+              
+              text = ''
+              for event in response['completion']:
+                  if 'chunk' in event and 'bytes' in event['chunk']:
+                      text += event['chunk']['bytes'].decode('utf-8')
+              
+              return {'response': text, 'sessionId': session_id}
+          
+          def lambda_handler(event, context):
+              route_key = event.get('requestContext', {}).get('routeKey')
+              connection_id = event.get('requestContext', {}).get('connectionId')
+              
+              if 'async_processing' in event:
+                  async_event = event['async_processing']
+                  try:
+                      send_message(async_event['connectionId'], {
+                          'type': 'progress',
+                          'requestId': async_event['requestId'],
+                          'message': 'Agent is thinking...'
+                      }, async_event['event'])
+                      
+                      agent_arn = ONBOARDING_AGENT_ARN if async_event['agentType'] == 'onboarding' else PROVISIONING_AGENT_ARN
+                      result = call_a2a_agent(agent_arn, async_event['message'], async_event['sessionId'])
+                      
+                      send_message(async_event['connectionId'], {
+                          'type': 'response',
+                          'requestId': async_event['requestId'],
+                          'response': result['response']
+                      }, async_event['event'])
+                  except Exception as e:
+                      print(f"Error: {e}")
+                      import traceback
+                      traceback.print_exc()
+                      send_message(async_event['connectionId'], {
+                          'type': 'error',
+                          'requestId': async_event['requestId'],
+                          'error': str(e)
+                      }, async_event['event'])
+                  return {'statusCode': 200}
+              
+              try:
+                  if route_key == '$connect':
+                      send_message(connection_id, {'type': 'connected'}, event)
+                      return {'statusCode': 200}
+                  elif route_key == '$disconnect':
+                      return {'statusCode': 200}
+                  elif route_key == '$default':
+                      body = json.loads(event.get('body', '{}'))
+                      send_message(connection_id, {
+                          'type': 'acknowledged',
+                          'requestId': body.get('id'),
+                          'agentType': body.get('agentType')
+                      }, event)
+                      
+                      lambda_client.invoke(
+                          FunctionName=context.function_name,
+                          InvocationType='Event',
+                          Payload=json.dumps({
+                              'async_processing': {
+                                  'agentType': body.get('agentType'),
+                                  'message': body.get('message'),
+                                  'requestId': body.get('id'),
+                                  'sessionId': body.get('sessionId'),
+                                  'connectionId': connection_id,
+                                  'event': event
+                              }
+                          })
+                      )
+                      return {'statusCode': 200}
+                  return {'statusCode': 400}
+              except Exception as e:
+                  print(f"Error: {e}")
+                  return {'statusCode': 500}
           
           ONBOARDING_AGENT_ARN = os.environ['ONBOARDING_AGENT_ARN']
           PROVISIONING_AGENT_ARN = os.environ['PROVISIONING_AGENT_ARN']
